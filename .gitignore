@@ -1,0 +1,19 @@
+# Environment Variables (PENTING: Jangan dihapus baris ini)
+.env
+
+# Binary / Executables (Hasil Build)
+artela-api
+artela-api.exe
+main
+main.exe
+
+# OS Specific Files
+.DS_Store
+Thumbs.db
+
+# Editor Directories
+.idea/
+.vscode/
+
+# Dependency Directories (Optional, biasanya vendor tidak dicommit di Go modern)
+vendor/
