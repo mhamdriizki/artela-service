@@ -27,6 +27,8 @@ func seedErrorCodes(db *gorm.DB) {
 		{Code: "ART-98-002", MessageEN: "Missing Required Fields", MessageID: "Data Wajib Belum Diisi"},
 		{Code: "ART-98-003", MessageEN: "Slug Already Exists", MessageID: "Link Undangan Sudah Digunakan"},
 		{Code: "ART-98-004", MessageEN: "Data Not Found", MessageID: "Data Tidak Ditemukan"},
+		{Code: "ART-98-005", MessageEN: "Max 5 files allowed", MessageID: "Maksimal upload 5 foto sekaligus"},
+    {Code: "ART-98-006", MessageEN: "Invalid file type (JPG/PNG only)", MessageID: "Format file salah (Hanya JPG/PNG)"},
 		{Code: "ART-98-100", MessageEN: "Unauthorized", MessageID: "Akses Ditolak"},
 		
 		// SERVER ERRORS (5xx) - Prefix 99
@@ -73,12 +75,15 @@ func main() {
 	app := fiber.New()
 	app.Use(cors.New())
 
+	app.Static("/uploads", "./public/uploads")
+
 	// Health check (RAW response, tidak pakai schema wrapper)
 	app.Get("/health", healthHandler.Check)
 
 	api := app.Group("/api")
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
 	api.Post("/admin/create", invHandler.CreateInvitation)
+	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery)
 
 	// Start
 	port := os.Getenv("APP_PORT")

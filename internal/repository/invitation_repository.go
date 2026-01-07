@@ -2,6 +2,7 @@ package repository
 
 import (
 	"artela-service/internal/entity"
+
 	"gorm.io/gorm"
 )
 
@@ -9,6 +10,7 @@ import (
 type InvitationRepository interface {
 	FindBySlug(slug string) (*entity.Invitation, error)
 	Create(invitation *entity.Invitation) error
+	AddGallery(inv *entity.Invitation, images []entity.GalleryImage) error
 }
 
 // Implementation
@@ -28,4 +30,8 @@ func (r *invitationRepository) FindBySlug(slug string) (*entity.Invitation, erro
 
 func (r *invitationRepository) Create(invitation *entity.Invitation) error {
 	return r.db.Create(invitation).Error
+}
+
+func (r *invitationRepository) AddGallery(inv *entity.Invitation, images []entity.GalleryImage) error {
+    return r.db.Model(inv).Association("GalleryImages").Append(images)
 }

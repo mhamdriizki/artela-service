@@ -10,6 +10,7 @@ import (
 type InvitationService interface {
 	GetInvitation(slug string) (*entity.InvitationResponse, error)
 	CreateInvitation(req *entity.Invitation) error
+	AddGalleryImages(slug string, imageUrls []string) error
 }
 
 // Implementation
@@ -57,4 +58,28 @@ func (s *invitationService) GetInvitation(slug string) (*entity.InvitationRespon
 
 func (s *invitationService) CreateInvitation(req *entity.Invitation) error {
 	return s.repo.Create(req)
+}
+
+// Implementasi
+func (s *invitationService) AddGalleryImages(slug string, imageUrls []string) error {
+    // 1. Cari Undangan berdasarkan Slug
+    inv, err := s.repo.FindBySlug(slug)
+    if err != nil {
+        return err
+    }
+
+    // 2. Simpan ke database (looping insert)
+    // Sebaiknya repo punya method InsertGallery, tapi biar cepat kita pakai save via struct parent
+    // atau kita inject repo khusus gallery. Untuk simpelnya kita pakai pendekatan GORM association.
+    
+    var gallery []entity.GalleryImage
+    for _, url := range imageUrls {
+        gallery = append(gallery, entity.GalleryImage{
+            InvitationID: inv.ID,
+            Url:          url,
+        })
+    }
+
+    // Menggunakan Association Mode GORM untuk insert bulk
+    return s.repo.AddGallery(inv, gallery)
 }
