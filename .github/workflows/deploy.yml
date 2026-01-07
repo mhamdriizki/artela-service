@@ -1,0 +1,51 @@
+name: Deploy Go Backend
+
+on:
+  push:
+    branches:
+      - master  # Workflow jalan setiap ada push ke branch master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Ambil kode terbaru dari GitHub
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # 2. Setup Go Environment
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21' # Sesuaikan dengan versi Go kamu
+
+    # 3. Build Binary (Cross Compile ke Linux)
+    - name: Build Binary
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o artela-api cmd/main.go
+
+    # 4. Kirim File Binary ke VPS (via SCP)
+    - name: Copy Binary to VPS
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: ${{ secrets.VPS_PORT }}
+        source: "artela-api" # Hanya kirim file binary hasil build
+        target: "/root/apps/artela-api/" # Folder tujuan di VPS
+
+    # 5. Restart Aplikasi di VPS (via SSH)
+    - name: Restart PM2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: ${{ secrets.VPS_PORT }}
+        script: |
+          cd /root/apps/artela-api
+          chmod +x artela-api
+          pm2 restart artela-backend
+          echo "🚀 Deployment Success!"
