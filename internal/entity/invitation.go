@@ -9,7 +9,7 @@ import (
 type Invitation struct {
 	gorm.Model
 	Slug          string         `gorm:"uniqueIndex" json:"slug"`
-	Theme         string         `json:"theme"`
+	Theme         string         `json:"theme"` // Field Baru
 	CoupleName    string         `json:"couple_name"`
 	GroomName     string         `json:"groom_name"`
 	GroomPhoto    string         `json:"groom_photo_url"`
@@ -27,11 +27,10 @@ type Invitation struct {
 
 type GalleryImage struct {
 	gorm.Model
-	InvitationID uint   `json:"-"` // Hide ID relasi di JSON
+	InvitationID uint   `json:"-"`
 	Url          string `json:"url"`
 }
 
-// Guestbook Entity
 type Guestbook struct {
 	gorm.Model
 	InvitationID uint   `json:"invitation_id"`
@@ -39,7 +38,6 @@ type Guestbook struct {
 	Message      string `json:"message"`
 }
 
-// RSVP Entity
 type RSVP struct {
 	gorm.Model
 	InvitationID uint   `json:"invitation_id"`
@@ -48,20 +46,19 @@ type RSVP struct {
 	Pax          int    `json:"pax"`
 }
 
-// --- DTO (Data Transfer Object) untuk Response ke Frontend ---
+// --- DTO Response ---
 
-// InvitationResponse (Format JSON Output)
 type InvitationResponse struct {
 	Slug          string       `json:"slug"`
-	Theme         string       `json:"theme"`
+	Theme         string       `json:"theme"` // Field Baru
 	CoupleName    string       `json:"couple_name"`
 	GroomName     string       `json:"groom_name"`
 	GroomPhoto    string       `json:"groom_photo_url"`
 	BrideName     string       `json:"bride_name"`
 	BridePhoto    string       `json:"bride_photo_url"`
 	YoutubeUrl    string       `json:"youtube_url"`
-	Gallery       []string     `json:"gallery"`       // Array string URL simpel
-	EventDetails  EventDetails `json:"event_details"` // Nested JSON snake_case
+	Gallery       []string     `json:"gallery"`
+	EventDetails  EventDetails `json:"event_details"`
 }
 
 type EventDetails struct {

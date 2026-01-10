@@ -15,34 +15,24 @@ import (
 	"gorm.io/gorm"
 )
 
-// Fungsi Seeder Sederhana
 func seedErrorCodes(db *gorm.DB) {
 	codes := []entity.ErrorReference{
-		// SUCCESS (200) - Prefix 00
 		{Code: "ART-00-000", MessageEN: "Success", MessageID: "Berhasil"},
 		{Code: "ART-00-001", MessageEN: "Created Successfully", MessageID: "Data Berhasil Dibuat"},
-		
-		// CLIENT ERRORS (4xx) - Prefix 98
+		{Code: "ART-00-002", MessageEN: "Updated Successfully", MessageID: "Data Berhasil Diperbarui"}, // Baru
+		{Code: "ART-00-003", MessageEN: "Deleted Successfully", MessageID: "Data Berhasil Dihapus"},    // Baru
 		{Code: "ART-98-001", MessageEN: "Invalid Input Data", MessageID: "Data Input Tidak Valid"},
-		{Code: "ART-98-002", MessageEN: "Missing Required Fields", MessageID: "Data Wajib Belum Diisi"},
-		{Code: "ART-98-003", MessageEN: "Slug Already Exists", MessageID: "Link Undangan Sudah Digunakan"},
 		{Code: "ART-98-004", MessageEN: "Data Not Found", MessageID: "Data Tidak Ditemukan"},
 		{Code: "ART-98-005", MessageEN: "Max 5 files allowed", MessageID: "Maksimal upload 5 foto sekaligus"},
-    {Code: "ART-98-006", MessageEN: "Invalid file type (JPG/PNG only)", MessageID: "Format file salah (Hanya JPG/PNG)"},
-		{Code: "ART-98-100", MessageEN: "Unauthorized", MessageID: "Akses Ditolak"},
-		
-		// SERVER ERRORS (5xx) - Prefix 99
-		{Code: "ART-99-000", MessageEN: "Request Timeout", MessageID: "Waktu Permintaan Habis"},
-		{Code: "ART-99-001", MessageEN: "Database Error", MessageID: "Kesalahan Database"},
+		{Code: "ART-98-006", MessageEN: "Invalid file type", MessageID: "Format file salah (Hanya JPG/PNG)"},
+		{Code: "ART-99-002", MessageEN: "Database Error", MessageID: "Kesalahan Database"},
 		{Code: "ART-99-999", MessageEN: "Internal Server Error", MessageID: "Terjadi Kesalahan Sistem"},
 	}
 
 	for _, c := range codes {
-		// Gunakan Clauses(clause.OnConflict) jika ingin update data jika code sudah ada
-		// Atau FirstOrCreate seperti sebelumnya
 		db.FirstOrCreate(&c, entity.ErrorReference{Code: c.Code})
 	}
-	log.Println("✅ Error Codes Dictionary seeded completely!")
+	log.Println("✅ Error Codes seeded")
 }
 
 func main() {
@@ -50,42 +40,36 @@ func main() {
 		log.Println("Info: using system env")
 	}
 
-	// 1. Init Database
+	// 1. Init DB
 	db := config.NewDatabase()
-	// Migrate tabel baru ErrorReference
 	db.AutoMigrate(&entity.Invitation{}, &entity.GalleryImage{}, &entity.Guestbook{}, &entity.RSVP{}, &entity.ErrorReference{})
 
-	// 2. Run Seeder
+	// 2. Seed
 	seedErrorCodes(db)
 
-	// 3. Dependency Injection
-	// Repositories
+	// 3. DI
 	invRepo := repository.NewInvitationRepository(db)
-	errRepo := repository.NewErrorRepository(db) // Repo baru
-
-	// Services
+	errRepo := repository.NewErrorRepository(db)
 	invService := service.NewInvitationService(invRepo)
-
-	// Handlers
-	// Masukkan errRepo ke InvitationHandler
-	invHandler := handler.NewInvitationHandler(invService, errRepo) 
+	invHandler := handler.NewInvitationHandler(invService, errRepo)
 	healthHandler := handler.NewHealthHandler(db)
 
-	// 4. Fiber App
+	// 4. Fiber
 	app := fiber.New()
 	app.Use(cors.New())
-
 	app.Static("/uploads", "./public/uploads")
 
-	// Health check (RAW response, tidak pakai schema wrapper)
 	app.Get("/health", healthHandler.Check)
 
 	api := app.Group("/api")
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
-	api.Post("/admin/create", invHandler.CreateInvitation)
 	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery)
 
-	// Start
+	admin := api.Group("/admin")
+	admin.Post("/create", invHandler.CreateInvitation)
+	admin.Put("/invitation/:slug", invHandler.UpdateInvitation)    // Endpoint Baru
+	admin.Delete("/invitation/:slug", invHandler.DeleteInvitation) // Endpoint Baru
+
 	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "3000"

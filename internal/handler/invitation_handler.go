@@ -2,9 +2,9 @@ package handler
 
 import (
 	"artela-service/internal/entity"
-	"artela-service/internal/repository" // Import repo
+	"artela-service/internal/repository"
 	"artela-service/internal/service"
-	"artela-service/internal/utils" // Import utils response
+	"artela-service/internal/utils"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -15,10 +15,9 @@ import (
 
 type InvitationHandler struct {
 	service   service.InvitationService
-	errorRepo repository.ErrorRepository // Tambah ini
+	errorRepo repository.ErrorRepository
 }
 
-// Update Constructor
 func NewInvitationHandler(service service.InvitationService, errRepo repository.ErrorRepository) *InvitationHandler {
 	return &InvitationHandler{
 		service:   service,
@@ -28,82 +27,95 @@ func NewInvitationHandler(service service.InvitationService, errRepo repository.
 
 func (h *InvitationHandler) GetInvitation(c *fiber.Ctx) error {
 	slug := c.Params("slug")
-
 	response, err := h.service.GetInvitation(slug)
 	if err != nil {
-		// Return Error Response Standard (ART-99-999 atau buat kode khusus misal ART-40-404)
-		return utils.BuildResponse(c, h.errorRepo, "ART-99-999", nil)
+		return utils.BuildResponse(c, h.errorRepo, "ART-98-004", nil)
 	}
-
-	// Return Success Response Standard
 	return utils.BuildResponse(c, h.errorRepo, "ART-00-000", response)
 }
 
 func (h *InvitationHandler) CreateInvitation(c *fiber.Ctx) error {
 	var input entity.Invitation
 	if err := c.BodyParser(&input); err != nil {
-		return utils.BuildResponse(c, h.errorRepo, "ART-99-999", nil)
+		return utils.BuildResponse(c, h.errorRepo, "ART-98-001", nil)
 	}
 
 	if err := h.service.CreateInvitation(&input); err != nil {
-		return utils.BuildResponse(c, h.errorRepo, "ART-99-999", nil)
+		// Cek error duplicate slug (biasanya error dari GORM mengandung string duplicate key)
+		return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
 	}
 
-	return utils.BuildResponse(c, h.errorRepo, "ART-00-000", input)
+	return utils.BuildResponse(c, h.errorRepo, "ART-00-001", input)
 }
 
 func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
-    slug := c.Params("slug")
+	slug := c.Params("slug")
 
-    // 1. Parse Multipart Form
-    form, err := c.MultipartForm()
-    if err != nil {
-        return utils.BuildResponse(c, h.errorRepo, "ART-98-001", nil) // Invalid Data
-    }
+	form, err := c.MultipartForm()
+	if err != nil {
+		return utils.BuildResponse(c, h.errorRepo, "ART-98-001", nil)
+	}
 
-    files := form.File["photos"] // Key-nya 'photos'
+	files := form.File["photos"]
+	if len(files) > 5 {
+		return utils.BuildResponse(c, h.errorRepo, "ART-98-005", nil)
+	}
 
-    // 2. Validasi Jumlah File (Max 5)
-    if len(files) > 5 {
-        return utils.BuildResponse(c, h.errorRepo, "ART-98-005", nil)
-    }
+	var savedUrls []string
+	for _, file := range files {
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+			return utils.BuildResponse(c, h.errorRepo, "ART-98-006", nil)
+		}
 
-    var savedUrls []string
+		uniqueName := uuid.New().String() + ext
+		savePath := fmt.Sprintf("./public/uploads/%s", uniqueName)
 
-    // 3. Validasi Ekstensi & Simpan File
-    for _, file := range files {
-        // Ambil ekstensi dan lowercase biar validasi aman
-        ext := strings.ToLower(filepath.Ext(file.Filename))
+		if err := c.SaveFile(file, savePath); err != nil {
+			return utils.BuildResponse(c, h.errorRepo, "ART-99-999", nil)
+		}
+		savedUrls = append(savedUrls, fmt.Sprintf("/uploads/%s", uniqueName))
+	}
 
-        // Validasi: Hanya JPG dan PNG
-        if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-            return utils.BuildResponse(c, h.errorRepo, "ART-98-006", nil)
-        }
+	if err := h.service.AddGalleryImages(slug, savedUrls); err != nil {
+		return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
+	}
 
-        // Generate nama unik: uuid + extension
-        uniqueName := uuid.New().String() + ext
-        
-        // Tentukan path penyimpanan (folder 'public/uploads' harus dibuat dulu)
-        savePath := fmt.Sprintf("./public/uploads/%s", uniqueName)
-        
-        // Simpan file fisik
-        if err := c.SaveFile(file, savePath); err != nil {
-            return utils.BuildResponse(c, h.errorRepo, "ART-99-999", nil)
-        }
+	return utils.BuildResponse(c, h.errorRepo, "ART-00-001", fiber.Map{
+		"uploaded_count": len(savedUrls),
+		"urls":           savedUrls,
+	})
+}
 
-        // Generate URL Public (asumsi domain localhost/server)
-        // Nanti di production bisa diganti domain asli
-        fullUrl := fmt.Sprintf("/uploads/%s", uniqueName)
-        savedUrls = append(savedUrls, fullUrl)
-    }
+// Update Invitation (PUT)
+func (h *InvitationHandler) UpdateInvitation(c *fiber.Ctx) error {
+	slug := c.Params("slug")
+	var input entity.Invitation
 
-    // 4. Panggil Service untuk simpan URL ke Database
-    if err := h.service.AddGalleryImages(slug, savedUrls); err != nil {
-        return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
-    }
+	if err := c.BodyParser(&input); err != nil {
+		return utils.BuildResponse(c, h.errorRepo, "ART-98-001", nil)
+	}
 
-    return utils.BuildResponse(c, h.errorRepo, "ART-00-001", fiber.Map{
-        "uploaded_count": len(savedUrls),
-        "urls":           savedUrls,
-    })
+	if err := h.service.UpdateInvitation(slug, &input); err != nil {
+		if err.Error() == "data tidak ditemukan" {
+			return utils.BuildResponse(c, h.errorRepo, "ART-98-004", nil)
+		}
+		return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
+	}
+
+	return utils.BuildResponse(c, h.errorRepo, "ART-00-002", nil)
+}
+
+// Delete Invitation (DELETE)
+func (h *InvitationHandler) DeleteInvitation(c *fiber.Ctx) error {
+	slug := c.Params("slug")
+
+	if err := h.service.DeleteInvitation(slug); err != nil {
+		if err.Error() == "data tidak ditemukan" {
+			return utils.BuildResponse(c, h.errorRepo, "ART-98-004", nil)
+		}
+		return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
+	}
+
+	return utils.BuildResponse(c, h.errorRepo, "ART-00-003", nil)
 }

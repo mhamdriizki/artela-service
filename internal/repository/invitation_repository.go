@@ -6,11 +6,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// Interface (Kontrak)
+// Interface
 type InvitationRepository interface {
 	FindBySlug(slug string) (*entity.Invitation, error)
 	Create(invitation *entity.Invitation) error
 	AddGallery(inv *entity.Invitation, images []entity.GalleryImage) error
+	Update(invitation *entity.Invitation) error // Baru
+	Delete(invitation *entity.Invitation) error // Baru
 }
 
 // Implementation
@@ -33,5 +35,15 @@ func (r *invitationRepository) Create(invitation *entity.Invitation) error {
 }
 
 func (r *invitationRepository) AddGallery(inv *entity.Invitation, images []entity.GalleryImage) error {
-    return r.db.Model(inv).Association("GalleryImages").Append(images)
+	return r.db.Model(inv).Association("GalleryImages").Append(images)
+}
+
+// Update Data
+func (r *invitationRepository) Update(invitation *entity.Invitation) error {
+	return r.db.Save(invitation).Error
+}
+
+// Delete Data
+func (r *invitationRepository) Delete(invitation *entity.Invitation) error {
+	return r.db.Delete(invitation).Error
 }
