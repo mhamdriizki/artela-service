@@ -2,12 +2,14 @@ package entity
 
 import (
 	"time"
+
 	"gorm.io/gorm"
 )
 
 type Invitation struct {
 	gorm.Model
 	Slug          string         `gorm:"uniqueIndex" json:"slug"`
+	Theme         string         `json:"theme"`
 	CoupleName    string         `json:"couple_name"`
 	GroomName     string         `json:"groom_name"`
 	GroomPhoto    string         `json:"groom_photo_url"`
@@ -51,6 +53,7 @@ type RSVP struct {
 // InvitationResponse (Format JSON Output)
 type InvitationResponse struct {
 	Slug          string       `json:"slug"`
+	Theme         string       `json:"theme"`
 	CoupleName    string       `json:"couple_name"`
 	GroomName     string       `json:"groom_name"`
 	GroomPhoto    string       `json:"groom_photo_url"`

@@ -38,6 +38,7 @@ func (s *invitationService) GetInvitation(slug string) (*entity.InvitationRespon
 
 	response := &entity.InvitationResponse{
 		Slug:          inv.Slug,
+		Theme:         inv.Theme,
 		CoupleName:    inv.CoupleName,
 		GroomName:     inv.GroomName,
 		GroomPhoto:    inv.GroomPhoto,
