@@ -3,109 +3,26 @@ package service
 import (
 	"artela-service/internal/entity"
 	"artela-service/internal/repository"
-	"errors"
+	"os"
+	"path/filepath"
 )
 
-// Interface
 type InvitationService interface {
-	GetInvitation(slug string) (*entity.InvitationResponse, error)
+	GetAllInvitations() (*entity.InvitationListWrapper, error)
+	GetInvitation(slug string) (*entity.Invitation, error)
 	CreateInvitation(req *entity.Invitation) error
-	AddGalleryImages(slug string, imageUrls []string) error
 	UpdateInvitation(slug string, req *entity.Invitation) error
 	DeleteInvitation(slug string) error
-	GetAllInvitations() (*entity.InvitationListWrapper, error)
+	UploadGallery(slug string, filenames []string) error
+	DeleteGalleryImage(id uint) error // <-- BARU
 }
 
-// Implementation
 type invitationService struct {
 	repo repository.InvitationRepository
 }
 
 func NewInvitationService(repo repository.InvitationRepository) InvitationService {
 	return &invitationService{repo: repo}
-}
-
-func (s *invitationService) GetInvitation(slug string) (*entity.InvitationResponse, error) {
-	// 1. Ambil data
-	inv, err := s.repo.FindBySlug(slug)
-	if err != nil {
-		return nil, errors.New("undangan tidak ditemukan")
-	}
-
-	// 2. Transformasi ke Response
-	galleryUrls := []string{}
-	for _, img := range inv.GalleryImages {
-		galleryUrls = append(galleryUrls, img.Url)
-	}
-
-	response := &entity.InvitationResponse{
-		Slug:          inv.Slug,
-		Theme:         inv.Theme, // Mapping Theme
-		CoupleName:    inv.CoupleName,
-		GroomName:     inv.GroomName,
-		GroomPhoto:    inv.GroomPhoto,
-		BrideName:     inv.BrideName,
-		BridePhoto:    inv.BridePhoto,
-		YoutubeUrl:    inv.YoutubeUrl,
-		Gallery:       galleryUrls,
-		EventDetails: entity.EventDetails{
-			Date:     inv.EventDate,
-			Location: inv.EventLocation,
-			Address:  inv.EventAddress,
-			MapUrl:   inv.MapUrl,
-		},
-	}
-
-	return response, nil
-}
-
-func (s *invitationService) CreateInvitation(req *entity.Invitation) error {
-	return s.repo.Create(req)
-}
-
-func (s *invitationService) AddGalleryImages(slug string, imageUrls []string) error {
-	inv, err := s.repo.FindBySlug(slug)
-	if err != nil {
-		return err
-	}
-
-	var gallery []entity.GalleryImage
-	for _, url := range imageUrls {
-		gallery = append(gallery, entity.GalleryImage{
-			InvitationID: inv.ID,
-			Url:          url,
-		})
-	}
-	return s.repo.AddGallery(inv, gallery)
-}
-
-// Logic Update
-func (s *invitationService) UpdateInvitation(slug string, req *entity.Invitation) error {
-	// 1. Cek data lama
-	existing, err := s.repo.FindBySlug(slug)
-	if err != nil {
-		return errors.New("data tidak ditemukan")
-	}
-
-	// 2. Assign ID lama ke struct baru (agar terhitung update)
-	req.ID = existing.ID
-	req.CreatedAt = existing.CreatedAt
-	
-	// Handle jika slug kosong, pakai yang lama
-	if req.Slug == "" {
-		req.Slug = existing.Slug
-	}
-
-	return s.repo.Update(req)
-}
-
-// Logic Delete
-func (s *invitationService) DeleteInvitation(slug string) error {
-	existing, err := s.repo.FindBySlug(slug)
-	if err != nil {
-		return errors.New("data tidak ditemukan")
-	}
-	return s.repo.Delete(existing)
 }
 
 func (s *invitationService) GetAllInvitations() (*entity.InvitationListWrapper, error) {
@@ -124,14 +41,72 @@ func (s *invitationService) GetAllInvitations() (*entity.InvitationListWrapper, 
 			CreatedAt:  item.CreatedAt.Format("2006-01-02"),
 		})
 	}
-    
-    // Jika data kosong, inisialisasi array kosong agar JSON tetap "data": [] (bukan null)
-    if list == nil {
-        list = []entity.InvitationListResponse{}
-    }
+	
+	// Init empty slice jika null agar JSON tetap []
+	if list == nil {
+		list = []entity.InvitationListResponse{}
+	}
 
-	// ---> BUNGKUS DISINI <---
-	return &entity.InvitationListWrapper{
-		Data: list,
-	}, nil
+	// Return dengan Wrapper
+	return &entity.InvitationListWrapper{Data: list}, nil
+}
+
+func (s *invitationService) GetInvitation(slug string) (*entity.Invitation, error) {
+	return s.repo.FindBySlug(slug)
+}
+
+func (s *invitationService) CreateInvitation(req *entity.Invitation) error {
+	return s.repo.Create(req)
+}
+
+func (s *invitationService) UpdateInvitation(slug string, req *entity.Invitation) error {
+	existing, err := s.repo.FindBySlug(slug)
+	if err != nil {
+		return err
+	}
+	// Pastikan ID tetap sama saat update
+	req.ID = existing.ID
+	req.CreatedAt = existing.CreatedAt
+	return s.repo.Update(req)
+}
+
+func (s *invitationService) DeleteInvitation(slug string) error {
+	return s.repo.Delete(slug)
+}
+
+func (s *invitationService) UploadGallery(slug string, filenames []string) error {
+	inv, err := s.repo.FindBySlug(slug)
+	if err != nil {
+		return err
+	}
+
+	var images []entity.GalleryImage
+	for _, fname := range filenames {
+		images = append(images, entity.GalleryImage{
+			InvitationID: inv.ID,
+			Filename:     fname,
+		})
+	}
+	return s.repo.CreateGallery(images)
+}
+
+// --- IMPLEMENTASI BARU (DELETE GALLERY) ---
+
+func (s *invitationService) DeleteGalleryImage(id uint) error {
+	// 1. Ambil data gambar untuk tahu nama filenya
+	img, err := s.repo.FindGalleryImageByID(id)
+	if err != nil {
+		return err
+	}
+
+	// 2. Hapus File Fisik di folder public/uploads
+	if img.Filename != "" {
+		// Pastikan path sesuai struktur foldermu
+		path := filepath.Join("public", "uploads", img.Filename)
+		// Hapus file, abaikan error jika file sudah tidak ada (biar DB tetap bersih)
+		_ = os.Remove(path) 
+	}
+
+	// 3. Hapus Record Database
+	return s.repo.DeleteGalleryImage(id)
 }

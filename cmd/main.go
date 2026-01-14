@@ -19,7 +19,6 @@ import (
 
 // --- SEEDERS ---
 
-// 1. Seed Error Codes (Kamus Error)
 func seedErrorCodes(db *gorm.DB) {
 	codes := []entity.ErrorReference{
 		{Code: "ART-00-000", MessageEN: "Success", MessageID: "Berhasil"},
@@ -40,15 +39,13 @@ func seedErrorCodes(db *gorm.DB) {
 	log.Println("✅ Error Codes seeded")
 }
 
-// 2. Seed Admin User (Default Admin)
 func seedAdmin(db *gorm.DB) {
 	var count int64
 	db.Model(&entity.User{}).Count(&count)
 	if count == 0 {
-		// Default: username 'admin''
-		hash, _ := bcrypt.GenerateFromPassword([]byte("Langit1105"), bcrypt.DefaultCost)
+		hash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 		admin := entity.User{
-			Username: "artela",
+			Username: "admin",
 			Password: string(hash),
 			Role:     "admin",
 		}
@@ -60,77 +57,77 @@ func seedAdmin(db *gorm.DB) {
 // --- MAIN PROGRAM ---
 
 func main() {
-	// 1. Load Environment Variables
+	// 1. Load Env
 	if err := godotenv.Load(); err != nil {
 		log.Println("Info: using system env (no .env file found)")
 	}
 
-	// 2. Database Connection & Migration
+	// 2. Database
 	db := config.NewDatabase()
 	
-	// Auto Migrate semua Entity (termasuk User baru)
+	// Auto Migrate
 	err := db.AutoMigrate(
 		&entity.Invitation{},
 		&entity.GalleryImage{},
 		&entity.Guestbook{},
 		&entity.RSVP{},
 		&entity.ErrorReference{},
-		&entity.User{}, // Table User untuk Auth
+		&entity.User{},
 	)
 	if err != nil {
 		log.Fatal("Migration failed:", err)
 	}
 
-	// 3. Run Seeders
+	// 3. Seeders
 	seedErrorCodes(db)
 	seedAdmin(db)
 
-	// 4. Dependency Injection (Wiring)
+	// 4. Dependency Injection
 	
-	// -- Repositories --
+	// Repositories
 	invRepo := repository.NewInvitationRepository(db)
 	errRepo := repository.NewErrorRepository(db)
 	
-	// -- Services --
+	// Services
 	invService := service.NewInvitationService(invRepo)
 
-	// -- Handlers --
+	// Handlers
 	invHandler := handler.NewInvitationHandler(invService, errRepo)
 	healthHandler := handler.NewHealthHandler(db)
-	authHandler := handler.NewAuthHandler(db) // Handler baru untuk Login
+	authHandler := handler.NewAuthHandler(db)
 
-	// 5. Setup Fiber App
+	// 5. Setup Fiber
 	app := fiber.New()
 	
-	// Middleware CORS (Agar bisa diakses Frontend berbeda domain/port)
 	app.Use(cors.New())
-	
-	// Serve Static Files (Untuk Gambar Gallery)
 	app.Static("/uploads", "./public/uploads")
 
-	// 6. Define Routes
+	// 6. Routes
 	
-	// -- Public Routes --
+	// Public
 	app.Get("/health", healthHandler.Check)
 	
 	api := app.Group("/api")
-	api.Post("/login", authHandler.Login) // Login Endpoint
+	api.Post("/login", authHandler.Login)
 	
-	// Public Invitation Routes
+	// Invitation Public
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
-	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery) // Upload Foto (Bisa dipindah ke admin jika mau strict)
+	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery) // Upload Public (Bisa dipindah ke Admin jika mau)
 
-	// -- Protected Admin Routes (Butuh Token Bearer) --
+	// Protected Admin Routes
 	admin := api.Group("/admin")
-	admin.Use(middleware.Protected()) // Pasang Gembok Security 🔒
+	admin.Use(middleware.Protected())
 
-	// Dashboard: List Semua Undangan
-	admin.Get("/invitations", invHandler.GetAllInvitations) 
+	// List
+	admin.Get("/invitations", invHandler.GetAllInvitations)
 
-	// CRUD Operations
+	// CRUD
 	admin.Post("/create", invHandler.CreateInvitation)
 	admin.Put("/invitation/:slug", invHandler.UpdateInvitation)
 	admin.Delete("/invitation/:slug", invHandler.DeleteInvitation)
+	
+	// Gallery Delete Image (ENDPOINT BARU)
+	admin.Delete("/gallery/:id", invHandler.DeleteGalleryImage)
 
 	// 7. Start Server
 	port := os.Getenv("APP_PORT")

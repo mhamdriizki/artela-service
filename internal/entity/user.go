@@ -19,11 +19,3 @@ type LoginRequest struct {
 type LoginResponse struct {
 	Token string `json:"token"`
 }
-
-// Response Sederhana untuk Dashboard Table
-type InvitationListResponse struct {
-	Slug       string `json:"slug"`
-	CoupleName string `json:"couple_name"`
-	Theme      string `json:"theme"`
-	CreatedAt  string `json:"created_at"`
-}
