@@ -11,8 +11,9 @@ type InvitationService interface {
 	GetInvitation(slug string) (*entity.InvitationResponse, error)
 	CreateInvitation(req *entity.Invitation) error
 	AddGalleryImages(slug string, imageUrls []string) error
-	UpdateInvitation(slug string, req *entity.Invitation) error // Baru
-	DeleteInvitation(slug string) error                         // Baru
+	UpdateInvitation(slug string, req *entity.Invitation) error
+	DeleteInvitation(slug string) error
+	GetAllInvitations() (*entity.InvitationListWrapper, error)
 }
 
 // Implementation
@@ -105,4 +106,32 @@ func (s *invitationService) DeleteInvitation(slug string) error {
 		return errors.New("data tidak ditemukan")
 	}
 	return s.repo.Delete(existing)
+}
+
+func (s *invitationService) GetAllInvitations() (*entity.InvitationListWrapper, error) {
+	data, err := s.repo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	// Mapping ke list response
+	var list []entity.InvitationListResponse
+	for _, item := range data {
+		list = append(list, entity.InvitationListResponse{
+			Slug:       item.Slug,
+			CoupleName: item.CoupleName,
+			Theme:      item.Theme,
+			CreatedAt:  item.CreatedAt.Format("2006-01-02"),
+		})
+	}
+    
+    // Jika data kosong, inisialisasi array kosong agar JSON tetap "data": [] (bukan null)
+    if list == nil {
+        list = []entity.InvitationListResponse{}
+    }
+
+	// ---> BUNGKUS DISINI <---
+	return &entity.InvitationListWrapper{
+		Data: list,
+	}, nil
 }

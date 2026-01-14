@@ -61,6 +61,10 @@ type InvitationResponse struct {
 	EventDetails  EventDetails `json:"event_details"`
 }
 
+type InvitationListWrapper struct {
+	Data []InvitationListResponse `json:"data"`
+}
+
 type EventDetails struct {
 	Date     time.Time `json:"date"`
 	Location string    `json:"location"`

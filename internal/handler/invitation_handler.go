@@ -119,3 +119,11 @@ func (h *InvitationHandler) DeleteInvitation(c *fiber.Ctx) error {
 
 	return utils.BuildResponse(c, h.errorRepo, "ART-00-003", nil)
 }
+
+func (h *InvitationHandler) GetAllInvitations(c *fiber.Ctx) error {
+    response, err := h.service.GetAllInvitations()
+    if err != nil {
+        return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
+    }
+    return utils.BuildResponse(c, h.errorRepo, "ART-00-000", response)
+}

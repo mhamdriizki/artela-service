@@ -11,8 +11,9 @@ type InvitationRepository interface {
 	FindBySlug(slug string) (*entity.Invitation, error)
 	Create(invitation *entity.Invitation) error
 	AddGallery(inv *entity.Invitation, images []entity.GalleryImage) error
-	Update(invitation *entity.Invitation) error // Baru
-	Delete(invitation *entity.Invitation) error // Baru
+	Update(invitation *entity.Invitation) error
+	Delete(invitation *entity.Invitation) error
+	FindAll() ([]entity.Invitation, error)
 }
 
 // Implementation
@@ -46,4 +47,11 @@ func (r *invitationRepository) Update(invitation *entity.Invitation) error {
 // Delete Data
 func (r *invitationRepository) Delete(invitation *entity.Invitation) error {
 	return r.db.Delete(invitation).Error
+}
+
+func (r *invitationRepository) FindAll() ([]entity.Invitation, error) {
+    var invs []entity.Invitation
+    // Select field penting saja biar ringan
+    err := r.db.Select("slug, couple_name, theme, created_at").Find(&invs).Error
+    return invs, err
 }
