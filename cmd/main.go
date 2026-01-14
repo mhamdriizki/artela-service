@@ -17,8 +17,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// --- SEEDERS ---
-
 func seedErrorCodes(db *gorm.DB) {
 	codes := []entity.ErrorReference{
 		{Code: "ART-00-000", MessageEN: "Success", MessageID: "Berhasil"},
@@ -29,6 +27,10 @@ func seedErrorCodes(db *gorm.DB) {
 		{Code: "ART-98-004", MessageEN: "Data Not Found", MessageID: "Data Tidak Ditemukan"},
 		{Code: "ART-98-005", MessageEN: "Max 5 files allowed", MessageID: "Maksimal upload 5 foto sekaligus"},
 		{Code: "ART-98-006", MessageEN: "Invalid file type", MessageID: "Format file salah (Hanya JPG/PNG)"},
+		
+		// ERROR CODE BARU
+		{Code: "ART-98-007", MessageEN: "File size exceeds 2MB limit", MessageID: "Ukuran file melebihi batas 2MB"},
+		
 		{Code: "ART-99-002", MessageEN: "Database Error", MessageID: "Kesalahan Database"},
 		{Code: "ART-99-999", MessageEN: "Internal Server Error", MessageID: "Terjadi Kesalahan Sistem"},
 	}
@@ -54,18 +56,19 @@ func seedAdmin(db *gorm.DB) {
 	}
 }
 
-// --- MAIN PROGRAM ---
-
 func main() {
-	// 1. Load Env
 	if err := godotenv.Load(); err != nil {
 		log.Println("Info: using system env (no .env file found)")
 	}
 
-	// 2. Database
+	// Buat folder upload
+	if _, err := os.Stat("./public/uploads"); os.IsNotExist(err) {
+		os.MkdirAll("./public/uploads", 0755)
+	}
+
 	db := config.NewDatabase()
 	
-	// Auto Migrate
+	// Auto Migrate Entity Terbaru
 	err := db.AutoMigrate(
 		&entity.Invitation{},
 		&entity.GalleryImage{},
@@ -78,58 +81,35 @@ func main() {
 		log.Fatal("Migration failed:", err)
 	}
 
-	// 3. Seeders
 	seedErrorCodes(db)
 	seedAdmin(db)
 
-	// 4. Dependency Injection
-	
-	// Repositories
 	invRepo := repository.NewInvitationRepository(db)
 	errRepo := repository.NewErrorRepository(db)
-	
-	// Services
 	invService := service.NewInvitationService(invRepo)
-
-	// Handlers
 	invHandler := handler.NewInvitationHandler(invService, errRepo)
 	healthHandler := handler.NewHealthHandler(db)
 	authHandler := handler.NewAuthHandler(db)
 
-	// 5. Setup Fiber
 	app := fiber.New()
-	
 	app.Use(cors.New())
 	app.Static("/uploads", "./public/uploads")
 
-	// 6. Routes
-	
-	// Public
 	app.Get("/health", healthHandler.Check)
 	
 	api := app.Group("/api")
 	api.Post("/login", authHandler.Login)
-	
-	// Invitation Public
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
-	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery) // Upload Public (Bisa dipindah ke Admin jika mau)
+	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery)
 
-	// Protected Admin Routes
 	admin := api.Group("/admin")
 	admin.Use(middleware.Protected())
-
-	// List
 	admin.Get("/invitations", invHandler.GetAllInvitations)
-
-	// CRUD
 	admin.Post("/create", invHandler.CreateInvitation)
 	admin.Put("/invitation/:slug", invHandler.UpdateInvitation)
 	admin.Delete("/invitation/:slug", invHandler.DeleteInvitation)
-	
-	// Gallery Delete Image (ENDPOINT BARU)
 	admin.Delete("/gallery/:id", invHandler.DeleteGalleryImage)
 
-	// 7. Start Server
 	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "3000"

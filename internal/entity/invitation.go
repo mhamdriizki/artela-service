@@ -3,12 +3,11 @@ package entity
 import (
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
-// Main Entity
 type Invitation struct {
-	gorm.Model
+	BaseEntity
 	Slug          string         `gorm:"uniqueIndex" json:"slug"`
 	Theme         string         `json:"theme"`
 	CoupleName    string         `json:"couple_name"`
@@ -22,69 +21,42 @@ type Invitation struct {
 	EventAddress  string         `json:"event_address"`
 	MapUrl        string         `json:"map_url"`
 	
-	// Perubahan: Rename dari GalleryImages -> Gallery (agar match dengan Preload("Gallery"))
-	Gallery       []GalleryImage `gorm:"foreignKey:InvitationID" json:"gallery"` 
-	
-	Guestbooks    []Guestbook    `gorm:"foreignKey:InvitationID" json:"guestbooks"`
-	RSVPs         []RSVP         `gorm:"foreignKey:InvitationID" json:"rsvps"`
+	// Relation ID tipe UUID
+	Gallery       []GalleryImage `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"gallery"`
+	Guestbooks    []Guestbook    `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"guestbooks"`
+	RSVPs         []RSVP         `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rsvps"`
 }
 
-// Entity Gallery
 type GalleryImage struct {
-	gorm.Model
-	InvitationID uint   `json:"-"`
-	// Perubahan: Rename dari Url -> Filename (agar match dengan Service logic)
-	Filename     string `json:"filename"` 
+	BaseEntity
+	InvitationID uuid.UUID `gorm:"type:char(36)" json:"invitation_id"`
+	Filename     string    `json:"filename"`
 }
 
 type Guestbook struct {
-	gorm.Model
-	InvitationID uint   `json:"invitation_id"`
-	Name         string `json:"name"`
-	Message      string `json:"message"`
+	BaseEntity
+	InvitationID uuid.UUID `gorm:"type:char(36)" json:"invitation_id"`
+	Name         string    `json:"name"`
+	Message      string    `json:"message"`
 }
 
 type RSVP struct {
-	gorm.Model
-	InvitationID uint   `json:"invitation_id"`
-	Name         string `json:"name"`
-	Status       string `json:"status"`
-	Pax          int    `json:"pax"`
+	BaseEntity
+	InvitationID uuid.UUID `gorm:"type:char(36)" json:"invitation_id"`
+	Name         string    `json:"name"`
+	Status       string    `json:"status"`
+	Pax          int       `json:"pax"`
 }
 
-// --- DTO Responses (Untuk List Dashboard) ---
+// --- DTO ---
 
-// Wrapper { "data": [...] }
 type InvitationListWrapper struct {
 	Data []InvitationListResponse `json:"data"`
 }
 
-// Item Response Ringan
 type InvitationListResponse struct {
 	Slug       string `json:"slug"`
 	CoupleName string `json:"couple_name"`
 	Theme      string `json:"theme"`
 	CreatedAt  string `json:"created_at"`
-}
-
-// --- DTO Public (Optional, jika dipakai di response public) ---
-
-type InvitationResponse struct {
-	Slug          string       `json:"slug"`
-	Theme         string       `json:"theme"`
-	CoupleName    string       `json:"couple_name"`
-	GroomName     string       `json:"groom_name"`
-	GroomPhoto    string       `json:"groom_photo_url"`
-	BrideName     string       `json:"bride_name"`
-	BridePhoto    string       `json:"bride_photo_url"`
-	YoutubeUrl    string       `json:"youtube_url"`
-	Gallery       []string     `json:"gallery"` // Array filename string
-	EventDetails  EventDetails `json:"event_details"`
-}
-
-type EventDetails struct {
-	Date     time.Time `json:"date"`
-	Location string    `json:"location"`
-	Address  string    `json:"address"`
-	MapUrl   string    `json:"map_url"`
 }

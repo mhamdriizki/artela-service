@@ -21,12 +21,13 @@ func NewInvitationHandler(service service.InvitationService, errorRepo repositor
 	return &InvitationHandler{service: service, errorRepo: errorRepo}
 }
 
+// ... GetAll, GetOne, Create, Update, Delete (Copy dari sebelumnya, logic tidak berubah) ...
+
 func (h *InvitationHandler) GetAllInvitations(c *fiber.Ctx) error {
 	response, err := h.service.GetAllInvitations()
 	if err != nil {
 		return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
 	}
-	// Response sudah berupa wrapper {data: []} dari service
 	return utils.BuildResponse(c, h.errorRepo, "ART-00-000", response)
 }
 
@@ -70,6 +71,8 @@ func (h *InvitationHandler) DeleteInvitation(c *fiber.Ctx) error {
 	return utils.BuildResponse(c, h.errorRepo, "ART-00-003", nil)
 }
 
+// --- FOKUS PERUBAHAN DISINI ---
+
 func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	form, err := c.MultipartForm()
@@ -78,15 +81,23 @@ func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
 	}
 
 	files := form.File["photos"]
-	// Validasi Max 5 Files (Optional, di BE bisa dilepas jika FE sudah handle)
-	// if len(files) > 5 { ... }
+	// Limit jumlah file
+	if len(files) > 5 {
+		return utils.BuildResponse(c, h.errorRepo, "ART-98-005", nil)
+	}
 
 	var filenames []string
+	const MaxFileSize = 2 * 1024 * 1024 // 2 MB
+
 	for _, file := range files {
+		// 1. CEK SIZE (Backend Validation)
+		if file.Size > MaxFileSize {
+			// Return Error Code Baru: ART-98-007
+			return utils.BuildResponse(c, h.errorRepo, "ART-98-007", nil)
+		}
+
 		ext := filepath.Ext(file.Filename)
-		// Validasi Extension Sederhana
 		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-			// Skip atau Return Error (Disini kita return error biar strict)
 			return utils.BuildResponse(c, h.errorRepo, "ART-98-006", nil)
 		}
 		
@@ -104,15 +115,14 @@ func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
 	return utils.BuildResponse(c, h.errorRepo, "ART-00-001", fiber.Map{"uploaded_count": len(filenames)})
 }
 
-// --- IMPLEMENTASI BARU (HANDLER DELETE GALLERY) ---
-
 func (h *InvitationHandler) DeleteGalleryImage(c *fiber.Ctx) error {
-	id, err := c.ParamsInt("id")
-	if err != nil {
+	// ID sekarang string (UUID)
+	id := c.Params("id") 
+	if id == "" {
 		return utils.BuildResponse(c, h.errorRepo, "ART-98-001", nil)
 	}
 
-	if err := h.service.DeleteGalleryImage(uint(id)); err != nil {
+	if err := h.service.DeleteGalleryImage(id); err != nil {
 		return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
 	}
 

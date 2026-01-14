@@ -14,7 +14,7 @@ type InvitationService interface {
 	UpdateInvitation(slug string, req *entity.Invitation) error
 	DeleteInvitation(slug string) error
 	UploadGallery(slug string, filenames []string) error
-	DeleteGalleryImage(id uint) error // <-- BARU
+	DeleteGalleryImage(id string) error // Update param ke string
 }
 
 type invitationService struct {
@@ -31,7 +31,6 @@ func (s *invitationService) GetAllInvitations() (*entity.InvitationListWrapper, 
 		return nil, err
 	}
 
-	// Mapping ke list response
 	var list []entity.InvitationListResponse
 	for _, item := range data {
 		list = append(list, entity.InvitationListResponse{
@@ -42,12 +41,10 @@ func (s *invitationService) GetAllInvitations() (*entity.InvitationListWrapper, 
 		})
 	}
 	
-	// Init empty slice jika null agar JSON tetap []
 	if list == nil {
 		list = []entity.InvitationListResponse{}
 	}
 
-	// Return dengan Wrapper
 	return &entity.InvitationListWrapper{Data: list}, nil
 }
 
@@ -64,7 +61,6 @@ func (s *invitationService) UpdateInvitation(slug string, req *entity.Invitation
 	if err != nil {
 		return err
 	}
-	// Pastikan ID tetap sama saat update
 	req.ID = existing.ID
 	req.CreatedAt = existing.CreatedAt
 	return s.repo.Update(req)
@@ -90,23 +86,18 @@ func (s *invitationService) UploadGallery(slug string, filenames []string) error
 	return s.repo.CreateGallery(images)
 }
 
-// --- IMPLEMENTASI BARU (DELETE GALLERY) ---
-
-func (s *invitationService) DeleteGalleryImage(id uint) error {
-	// 1. Ambil data gambar untuk tahu nama filenya
+func (s *invitationService) DeleteGalleryImage(id string) error {
 	img, err := s.repo.FindGalleryImageByID(id)
 	if err != nil {
 		return err
 	}
 
-	// 2. Hapus File Fisik di folder public/uploads
+	// Hapus file fisik
 	if img.Filename != "" {
-		// Pastikan path sesuai struktur foldermu
 		path := filepath.Join("public", "uploads", img.Filename)
-		// Hapus file, abaikan error jika file sudah tidak ada (biar DB tetap bersih)
 		_ = os.Remove(path) 
 	}
 
-	// 3. Hapus Record Database
+	// Hard delete DB
 	return s.repo.DeleteGalleryImage(id)
 }
