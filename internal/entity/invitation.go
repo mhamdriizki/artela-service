@@ -8,20 +8,30 @@ import (
 
 type Invitation struct {
 	BaseEntity
-	Slug          string         `gorm:"uniqueIndex" json:"slug"`
-	Theme         string         `json:"theme"`
-	CoupleName    string         `json:"couple_name"`
-	GroomName     string         `json:"groom_name"`
-	GroomPhoto    string         `json:"groom_photo_url"`
-	BrideName     string         `json:"bride_name"`
-	BridePhoto    string         `json:"bride_photo_url"`
-	YoutubeUrl    string         `json:"youtube_url"`
-	EventDate     time.Time      `json:"event_date"`
-	EventLocation string         `json:"event_location"`
-	EventAddress  string         `json:"event_address"`
-	MapUrl        string         `json:"map_url"`
+	Slug          string    `gorm:"uniqueIndex" json:"slug"`
+	Theme         string    `json:"theme"`
+	CoupleName    string    `json:"couple_name"`
 	
-	// Relation ID tipe UUID
+	// Data Mempelai
+	GroomName     string    `json:"groom_name"`
+	GroomPhoto    string    `json:"groom_photo_url"`
+	BrideName     string    `json:"bride_name"`
+	BridePhoto    string    `json:"bride_photo_url"`
+	
+	// Field Baru: Tanggal & Lokasi
+	WeddingDate        time.Time `json:"wedding_date"`         // Tanggal Pernikahan Utama
+	
+	AkadLocation       string    `json:"akad_location"`        // Lokasi Akad
+	AkadMapUrl         string    `json:"akad_map_url"`         // Google Maps Akad
+	
+	ReceptionLocation  string    `json:"reception_location"`   // Lokasi Resepsi
+	ReceptionMapUrl    string    `json:"reception_map_url"`    // Google Maps Resepsi
+	
+	// Multimedia
+	YoutubeUrl         string    `json:"youtube_url"`          // Video Utama (jika ada)
+	BackgroundMusicUrl string    `json:"background_music_url"` // Backsound (Link Youtube)
+
+	// Relasi
 	Gallery       []GalleryImage `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"gallery"`
 	Guestbooks    []Guestbook    `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"guestbooks"`
 	RSVPs         []RSVP         `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rsvps"`
@@ -58,5 +68,6 @@ type InvitationListResponse struct {
 	Slug       string `json:"slug"`
 	CoupleName string `json:"couple_name"`
 	Theme      string `json:"theme"`
+	WeddingDate string `json:"wedding_date"`
 	CreatedAt  string `json:"created_at"`
 }

@@ -21,8 +21,6 @@ func NewInvitationHandler(service service.InvitationService, errorRepo repositor
 	return &InvitationHandler{service: service, errorRepo: errorRepo}
 }
 
-// ... GetAll, GetOne, Create, Update, Delete (Copy dari sebelumnya, logic tidak berubah) ...
-
 func (h *InvitationHandler) GetAllInvitations(c *fiber.Ctx) error {
 	response, err := h.service.GetAllInvitations()
 	if err != nil {
@@ -71,8 +69,6 @@ func (h *InvitationHandler) DeleteInvitation(c *fiber.Ctx) error {
 	return utils.BuildResponse(c, h.errorRepo, "ART-00-003", nil)
 }
 
-// --- FOKUS PERUBAHAN DISINI ---
-
 func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	form, err := c.MultipartForm()
@@ -81,8 +77,9 @@ func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
 	}
 
 	files := form.File["photos"]
-	// Limit jumlah file
-	if len(files) > 5 {
+	
+	// UPDATE: MAX 7 FILES
+	if len(files) > 7 {
 		return utils.BuildResponse(c, h.errorRepo, "ART-98-005", nil)
 	}
 
@@ -90,9 +87,7 @@ func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
 	const MaxFileSize = 2 * 1024 * 1024 // 2 MB
 
 	for _, file := range files {
-		// 1. CEK SIZE (Backend Validation)
 		if file.Size > MaxFileSize {
-			// Return Error Code Baru: ART-98-007
 			return utils.BuildResponse(c, h.errorRepo, "ART-98-007", nil)
 		}
 
@@ -116,7 +111,6 @@ func (h *InvitationHandler) UploadGallery(c *fiber.Ctx) error {
 }
 
 func (h *InvitationHandler) DeleteGalleryImage(c *fiber.Ctx) error {
-	// ID sekarang string (UUID)
 	id := c.Params("id") 
 	if id == "" {
 		return utils.BuildResponse(c, h.errorRepo, "ART-98-001", nil)

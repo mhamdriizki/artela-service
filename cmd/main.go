@@ -25,12 +25,12 @@ func seedErrorCodes(db *gorm.DB) {
 		{Code: "ART-00-003", MessageEN: "Deleted Successfully", MessageID: "Data Berhasil Dihapus"},
 		{Code: "ART-98-001", MessageEN: "Invalid Input Data", MessageID: "Data Input Tidak Valid"},
 		{Code: "ART-98-004", MessageEN: "Data Not Found", MessageID: "Data Tidak Ditemukan"},
-		{Code: "ART-98-005", MessageEN: "Max 5 files allowed", MessageID: "Maksimal upload 5 foto sekaligus"},
+		
+		// UPDATE: MAX 7 FILES
+		{Code: "ART-98-005", MessageEN: "Max 7 files allowed", MessageID: "Maksimal upload 7 foto sekaligus"},
+		
 		{Code: "ART-98-006", MessageEN: "Invalid file type", MessageID: "Format file salah (Hanya JPG/PNG)"},
-		
-		// ERROR CODE BARU
 		{Code: "ART-98-007", MessageEN: "File size exceeds 2MB limit", MessageID: "Ukuran file melebihi batas 2MB"},
-		
 		{Code: "ART-99-002", MessageEN: "Database Error", MessageID: "Kesalahan Database"},
 		{Code: "ART-99-999", MessageEN: "Internal Server Error", MessageID: "Terjadi Kesalahan Sistem"},
 	}
@@ -45,9 +45,9 @@ func seedAdmin(db *gorm.DB) {
 	var count int64
 	db.Model(&entity.User{}).Count(&count)
 	if count == 0 {
-		hash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		hash, _ := bcrypt.GenerateFromPassword([]byte("Langit1105"), bcrypt.DefaultCost)
 		admin := entity.User{
-			Username: "admin",
+			Username: "admin01",
 			Password: string(hash),
 			Role:     "admin",
 		}
@@ -61,14 +61,12 @@ func main() {
 		log.Println("Info: using system env (no .env file found)")
 	}
 
-	// Buat folder upload
 	if _, err := os.Stat("./public/uploads"); os.IsNotExist(err) {
 		os.MkdirAll("./public/uploads", 0755)
 	}
 
 	db := config.NewDatabase()
 	
-	// Auto Migrate Entity Terbaru
 	err := db.AutoMigrate(
 		&entity.Invitation{},
 		&entity.GalleryImage{},
@@ -99,6 +97,8 @@ func main() {
 	
 	api := app.Group("/api")
 	api.Post("/login", authHandler.Login)
+	api.Post("/logout", authHandler.Logout) // Endpoint Logout (Public/Protected opsional, tapi public aman untuk stateless)
+	
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
 	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery)
 

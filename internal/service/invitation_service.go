@@ -14,7 +14,7 @@ type InvitationService interface {
 	UpdateInvitation(slug string, req *entity.Invitation) error
 	DeleteInvitation(slug string) error
 	UploadGallery(slug string, filenames []string) error
-	DeleteGalleryImage(id string) error // Update param ke string
+	DeleteGalleryImage(id string) error
 }
 
 type invitationService struct {
@@ -34,10 +34,11 @@ func (s *invitationService) GetAllInvitations() (*entity.InvitationListWrapper, 
 	var list []entity.InvitationListResponse
 	for _, item := range data {
 		list = append(list, entity.InvitationListResponse{
-			Slug:       item.Slug,
-			CoupleName: item.CoupleName,
-			Theme:      item.Theme,
-			CreatedAt:  item.CreatedAt.Format("2006-01-02"),
+			Slug:        item.Slug,
+			CoupleName:  item.CoupleName,
+			Theme:       item.Theme,
+			WeddingDate: item.WeddingDate.Format("2006-01-02"), // Format tanggal ke String
+			CreatedAt:   item.CreatedAt.Format("2006-01-02"),
 		})
 	}
 	
@@ -92,12 +93,10 @@ func (s *invitationService) DeleteGalleryImage(id string) error {
 		return err
 	}
 
-	// Hapus file fisik
 	if img.Filename != "" {
 		path := filepath.Join("public", "uploads", img.Filename)
 		_ = os.Remove(path) 
 	}
 
-	// Hard delete DB
 	return s.repo.DeleteGalleryImage(id)
 }
