@@ -41,7 +41,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	claims["username"] = user.Username
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 
-	t, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	// FIX: Gunakan logic key yang SAMA PERSIS dengan Middleware
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "RAHASIA_DAPUR_ARTELA"
+	}
+
+	t, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Could not generate token"})
 	}
@@ -51,8 +57,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 // Method Logout (Stateless)
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
-	// Pada Stateless JWT, backend tidak perlu melakukan apa-apa selain memberi respon sukses.
-	// Frontend yang bertanggung jawab menghapus token dari Storage.
 	return c.Status(200).JSON(fiber.Map{
 		"message": "Logout successful",
 	})
