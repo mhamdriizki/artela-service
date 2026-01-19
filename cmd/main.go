@@ -61,8 +61,14 @@ func main() {
 		log.Println("Info: using system env (no .env file found)")
 	}
 
-	if _, err := os.Stat("./public/uploads"); os.IsNotExist(err) {
-		os.MkdirAll("./public/uploads", 0755)
+	// FIX: Tambahkan Error Handling saat membuat folder uploads
+	uploadPath := "./public/uploads"
+	if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
+		log.Printf("📂 Folder %s tidak ditemukan, mencoba membuat...", uploadPath)
+		if err := os.MkdirAll(uploadPath, 0755); err != nil {
+			log.Fatalf("❌ Gagal membuat folder upload: %v. Cek permission folder!", err)
+		}
+		log.Println("✅ Folder upload berhasil dibuat")
 	}
 
 	db := config.NewDatabase()
@@ -97,7 +103,7 @@ func main() {
 	
 	api := app.Group("/api")
 	api.Post("/login", authHandler.Login)
-	api.Post("/logout", authHandler.Logout) // Endpoint Logout (Public/Protected opsional, tapi public aman untuk stateless)
+	api.Post("/logout", authHandler.Logout)
 	
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
 	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery)
