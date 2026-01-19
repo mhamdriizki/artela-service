@@ -25,10 +25,7 @@ func seedErrorCodes(db *gorm.DB) {
 		{Code: "ART-00-003", MessageEN: "Deleted Successfully", MessageID: "Data Berhasil Dihapus"},
 		{Code: "ART-98-001", MessageEN: "Invalid Input Data", MessageID: "Data Input Tidak Valid"},
 		{Code: "ART-98-004", MessageEN: "Data Not Found", MessageID: "Data Tidak Ditemukan"},
-		
-		// UPDATE: MAX 7 FILES
 		{Code: "ART-98-005", MessageEN: "Max 7 files allowed", MessageID: "Maksimal upload 7 foto sekaligus"},
-		
 		{Code: "ART-98-006", MessageEN: "Invalid file type", MessageID: "Format file salah (Hanya JPG/PNG)"},
 		{Code: "ART-98-007", MessageEN: "File size exceeds 2MB limit", MessageID: "Ukuran file melebihi batas 2MB"},
 		{Code: "ART-99-002", MessageEN: "Database Error", MessageID: "Kesalahan Database"},
@@ -61,7 +58,6 @@ func main() {
 		log.Println("Info: using system env (no .env file found)")
 	}
 
-	// FIX: Tambahkan Error Handling saat membuat folder uploads
 	uploadPath := "./public/uploads"
 	if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
 		log.Printf("📂 Folder %s tidak ditemukan, mencoba membuat...", uploadPath)
@@ -95,7 +91,10 @@ func main() {
 	healthHandler := handler.NewHealthHandler(db)
 	authHandler := handler.NewAuthHandler(db)
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 30 * 1024 * 1024, 
+	})
+
 	app.Use(cors.New())
 	app.Static("/uploads", "./public/uploads")
 
