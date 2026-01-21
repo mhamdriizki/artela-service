@@ -7,15 +7,19 @@ import (
 )
 
 type InvitationRepository interface {
-	Create(invitation *entity.Invitation) error
 	FindAll() ([]entity.Invitation, error)
 	FindBySlug(slug string) (*entity.Invitation, error)
-	Update(invitation *entity.Invitation) error
-	Delete(slug string) error
+	FindGalleryImageByID(id string) (*entity.GalleryImage, error)
 	
+	Create(invitation *entity.Invitation) error
+	Update(invitation *entity.Invitation) error
+	// NEW: Update spesifik foto mempelai
+	UpdateCouplePhotos(slug string, groomPhoto string, bridePhoto string) error
+	
+	Delete(slug string) error
 	CreateGallery(images []entity.GalleryImage) error
-	FindGalleryImageByID(id string) (*entity.GalleryImage, error) // ID string (UUID)
 	DeleteGalleryImage(id string) error
+	CreateGuestbook(guestbook *entity.Guestbook) error
 }
 
 type invitationRepository struct {
@@ -26,29 +30,44 @@ func NewInvitationRepository(db *gorm.DB) InvitationRepository {
 	return &invitationRepository{db: db}
 }
 
-func (r *invitationRepository) Create(invitation *entity.Invitation) error {
-	return r.db.Create(invitation).Error
-}
-
 func (r *invitationRepository) FindAll() ([]entity.Invitation, error) {
-	var invs []entity.Invitation
-	err := r.db.Select("slug, couple_name, theme, created_at").Find(&invs).Error
-	return invs, err
+	var invitations []entity.Invitation
+	err := r.db.Order("created_at desc").Find(&invitations).Error
+	return invitations, err
 }
 
 func (r *invitationRepository) FindBySlug(slug string) (*entity.Invitation, error) {
 	var invitation entity.Invitation
-	err := r.db.Preload("Gallery").Where("slug = ?", slug).First(&invitation).Error
+	err := r.db.Preload("Gallery").Preload("Guestbooks", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at desc")
+	}).Preload("RSVPs").Where("slug = ?", slug).First(&invitation).Error
 	return &invitation, err
 }
 
+func (r *invitationRepository) Create(invitation *entity.Invitation) error {
+	return r.db.Create(invitation).Error
+}
+
 func (r *invitationRepository) Update(invitation *entity.Invitation) error {
+	// Gunakan Save agar semua field ter-update sesuai struct
 	return r.db.Save(invitation).Error
 }
 
+// UPDATE FOTO ONLY
+func (r *invitationRepository) UpdateCouplePhotos(slug string, groomPhoto string, bridePhoto string) error {
+	updates := map[string]interface{}{}
+	if groomPhoto != "" {
+		updates["groom_photo"] = groomPhoto
+	}
+	if bridePhoto != "" {
+		updates["bride_photo"] = bridePhoto
+	}
+	// Update kolom tertentu berdasarkan slug
+	return r.db.Model(&entity.Invitation{}).Where("slug = ?", slug).Updates(updates).Error
+}
+
 func (r *invitationRepository) Delete(slug string) error {
-	// Unscoped() = Hard Delete (Hapus permanen dari DB)
-	return r.db.Unscoped().Where("slug = ?", slug).Delete(&entity.Invitation{}).Error
+	return r.db.Where("slug = ?", slug).Delete(&entity.Invitation{}).Error
 }
 
 func (r *invitationRepository) CreateGallery(images []entity.GalleryImage) error {
@@ -57,11 +76,14 @@ func (r *invitationRepository) CreateGallery(images []entity.GalleryImage) error
 
 func (r *invitationRepository) FindGalleryImageByID(id string) (*entity.GalleryImage, error) {
 	var img entity.GalleryImage
-	err := r.db.First(&img, "id = ?", id).Error
+	err := r.db.Where("id = ?", id).First(&img).Error
 	return &img, err
 }
 
 func (r *invitationRepository) DeleteGalleryImage(id string) error {
-	// Unscoped() = Hard Delete
-	return r.db.Unscoped().Delete(&entity.GalleryImage{}, "id = ?", id).Error
+	return r.db.Where("id = ?", id).Delete(&entity.GalleryImage{}).Error
+}
+
+func (r *invitationRepository) CreateGuestbook(guestbook *entity.Guestbook) error {
+	return r.db.Create(guestbook).Error
 }

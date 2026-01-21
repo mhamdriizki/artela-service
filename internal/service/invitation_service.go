@@ -13,8 +13,13 @@ type InvitationService interface {
 	CreateInvitation(req *entity.Invitation) error
 	UpdateInvitation(slug string, req *entity.Invitation) error
 	DeleteInvitation(slug string) error
+	
+	// Upload Handlers
 	UploadGallery(slug string, filenames []string) error
+	UploadCouplePhotos(slug string, groomFilename string, brideFilename string) error
+	
 	DeleteGalleryImage(id string) error
+	CreateGuestbook(slug string, req *entity.Guestbook) error
 }
 
 type invitationService struct {
@@ -37,7 +42,7 @@ func (s *invitationService) GetAllInvitations() (*entity.InvitationListWrapper, 
 			Slug:        item.Slug,
 			CoupleName:  item.CoupleName,
 			Theme:       item.Theme,
-			WeddingDate: item.WeddingDate.Format("2006-01-02"), // Format tanggal ke String
+			WeddingDate: item.WeddingDate.Format("2006-01-02"),
 			CreatedAt:   item.CreatedAt.Format("2006-01-02"),
 		})
 	}
@@ -62,8 +67,14 @@ func (s *invitationService) UpdateInvitation(slug string, req *entity.Invitation
 	if err != nil {
 		return err
 	}
+	// Map ID agar GORM melakukan update pada record yang benar
 	req.ID = existing.ID
 	req.CreatedAt = existing.CreatedAt
+	
+	// Pertahankan foto lama jika JSON update tidak menyertakannya (biasanya string kosong)
+	if req.GroomPhoto == "" { req.GroomPhoto = existing.GroomPhoto }
+	if req.BridePhoto == "" { req.BridePhoto = existing.BridePhoto }
+	
 	return s.repo.Update(req)
 }
 
@@ -87,6 +98,10 @@ func (s *invitationService) UploadGallery(slug string, filenames []string) error
 	return s.repo.CreateGallery(images)
 }
 
+func (s *invitationService) UploadCouplePhotos(slug string, groomFilename string, brideFilename string) error {
+	return s.repo.UpdateCouplePhotos(slug, groomFilename, brideFilename)
+}
+
 func (s *invitationService) DeleteGalleryImage(id string) error {
 	img, err := s.repo.FindGalleryImageByID(id)
 	if err != nil {
@@ -99,4 +114,13 @@ func (s *invitationService) DeleteGalleryImage(id string) error {
 	}
 
 	return s.repo.DeleteGalleryImage(id)
+}
+
+func (s *invitationService) CreateGuestbook(slug string, req *entity.Guestbook) error {
+	inv, err := s.repo.FindBySlug(slug)
+	if err != nil {
+		return err
+	}
+	req.InvitationID = inv.ID
+	return s.repo.CreateGuestbook(req)
 }

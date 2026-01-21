@@ -17,6 +17,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// ... (seedErrorCodes, seedAdmin sama seperti sebelumnya, tidak berubah) ...
+// Saya singkat untuk menghemat space, tapi pastikan func seedErrorCodes dan seedAdmin ada
+
 func seedErrorCodes(db *gorm.DB) {
 	codes := []entity.ErrorReference{
 		{Code: "ART-00-000", MessageEN: "Success", MessageID: "Berhasil"},
@@ -31,7 +34,6 @@ func seedErrorCodes(db *gorm.DB) {
 		{Code: "ART-99-002", MessageEN: "Database Error", MessageID: "Kesalahan Database"},
 		{Code: "ART-99-999", MessageEN: "Internal Server Error", MessageID: "Terjadi Kesalahan Sistem"},
 	}
-
 	for _, c := range codes {
 		db.FirstOrCreate(&c, entity.ErrorReference{Code: c.Code})
 	}
@@ -104,14 +106,24 @@ func main() {
 	api.Post("/login", authHandler.Login)
 	api.Post("/logout", authHandler.Logout)
 	
+	// PUBLIC
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
 	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery)
+	api.Post("/invitation/:slug/guestbook", invHandler.CreateGuestbook)
 
+	// ADMIN
 	admin := api.Group("/admin")
 	admin.Use(middleware.Protected())
+	
 	admin.Get("/invitations", invHandler.GetAllInvitations)
-	admin.Post("/create", invHandler.CreateInvitation)
-	admin.Put("/invitation/:slug", invHandler.UpdateInvitation)
+	
+	// UPDATE ROUTES:
+	admin.Post("/create", invHandler.CreateInvitation) // JSON ONLY
+	admin.Put("/invitation/:slug", invHandler.UpdateInvitation) // JSON ONLY
+	
+	// NEW ROUTE: Upload Couple Photos (Multipart)
+	admin.Post("/invitation/:slug/upload-couple", invHandler.UploadCouplePhotos)
+	
 	admin.Delete("/invitation/:slug", invHandler.DeleteInvitation)
 	admin.Delete("/gallery/:id", invHandler.DeleteGalleryImage)
 

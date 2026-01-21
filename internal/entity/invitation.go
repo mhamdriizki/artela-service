@@ -14,22 +14,22 @@ type Invitation struct {
 	
 	// Data Mempelai
 	GroomName     string    `json:"groom_name"`
-	GroomPhoto    string    `json:"groom_photo_url"`
+	GroomPhoto    string    `json:"groom_photo"` // Disimpan string filename
 	BrideName     string    `json:"bride_name"`
-	BridePhoto    string    `json:"bride_photo_url"`
+	BridePhoto    string    `json:"bride_photo"` // Disimpan string filename
 	
-	// Field Baru: Tanggal & Lokasi
-	WeddingDate        time.Time `json:"wedding_date"`         // Tanggal Pernikahan Utama
+	// Detail Acara & Lokasi
+	// JSON Parser Go secara default menerima format RFC3339 (YYYY-MM-DDTHH:MM:SSZ)
+	WeddingDate        time.Time `json:"wedding_date"`
 	
-	AkadLocation       string    `json:"akad_location"`        // Lokasi Akad
-	AkadMapUrl         string    `json:"akad_map_url"`         // Google Maps Akad
-	
-	ReceptionLocation  string    `json:"reception_location"`   // Lokasi Resepsi
-	ReceptionMapUrl    string    `json:"reception_map_url"`    // Google Maps Resepsi
+	AkadLocation       string    `json:"akad_location"`
+	AkadMapUrl         string    `json:"akad_map_url"`
+	ReceptionLocation  string    `json:"reception_location"`
+	ReceptionMapUrl    string    `json:"reception_map_url"`
 	
 	// Multimedia
-	YoutubeUrl         string    `json:"youtube_url"`          // Video Utama (jika ada)
-	BackgroundMusicUrl string    `json:"background_music_url"` // Backsound (Link Youtube)
+	YoutubeUrl         string    `json:"youtube_url"`
+	BackgroundMusicUrl string    `json:"background_music_url"`
 
 	// Relasi
 	Gallery       []GalleryImage `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"gallery"`
@@ -59,7 +59,6 @@ type RSVP struct {
 }
 
 // --- DTO ---
-
 type InvitationListWrapper struct {
 	Data []InvitationListResponse `json:"data"`
 }
