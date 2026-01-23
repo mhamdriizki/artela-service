@@ -13,12 +13,13 @@ type InvitationRepository interface {
 	
 	Create(invitation *entity.Invitation) error
 	Update(invitation *entity.Invitation) error
-	// NEW: Update spesifik foto mempelai
 	UpdateCouplePhotos(slug string, groomPhoto string, bridePhoto string) error
-	
 	Delete(slug string) error
+	
 	CreateGallery(images []entity.GalleryImage) error
 	DeleteGalleryImage(id string) error
+	
+	// METHOD BARU
 	CreateGuestbook(guestbook *entity.Guestbook) error
 }
 
@@ -38,9 +39,16 @@ func (r *invitationRepository) FindAll() ([]entity.Invitation, error) {
 
 func (r *invitationRepository) FindBySlug(slug string) (*entity.Invitation, error) {
 	var invitation entity.Invitation
-	err := r.db.Preload("Gallery").Preload("Guestbooks", func(db *gorm.DB) *gorm.DB {
-		return db.Order("created_at desc")
-	}).Preload("RSVPs").Where("slug = ?", slug).First(&invitation).Error
+	
+	// UPDATE: Tambahkan Preload("Guestbooks") diurutkan dari yang terbaru
+	err := r.db.Preload("Gallery").
+		Preload("Guestbooks", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at desc")
+		}).
+		Preload("RSVPs").
+		Where("slug = ?", slug).
+		First(&invitation).Error
+		
 	return &invitation, err
 }
 
@@ -49,11 +57,9 @@ func (r *invitationRepository) Create(invitation *entity.Invitation) error {
 }
 
 func (r *invitationRepository) Update(invitation *entity.Invitation) error {
-	// Gunakan Save agar semua field ter-update sesuai struct
 	return r.db.Save(invitation).Error
 }
 
-// UPDATE FOTO ONLY
 func (r *invitationRepository) UpdateCouplePhotos(slug string, groomPhoto string, bridePhoto string) error {
 	updates := map[string]interface{}{}
 	if groomPhoto != "" {
@@ -62,7 +68,6 @@ func (r *invitationRepository) UpdateCouplePhotos(slug string, groomPhoto string
 	if bridePhoto != "" {
 		updates["bride_photo"] = bridePhoto
 	}
-	// Update kolom tertentu berdasarkan slug
 	return r.db.Model(&entity.Invitation{}).Where("slug = ?", slug).Updates(updates).Error
 }
 
@@ -84,6 +89,7 @@ func (r *invitationRepository) DeleteGalleryImage(id string) error {
 	return r.db.Where("id = ?", id).Delete(&entity.GalleryImage{}).Error
 }
 
+// IMPLEMENTASI BARU
 func (r *invitationRepository) CreateGuestbook(guestbook *entity.Guestbook) error {
 	return r.db.Create(guestbook).Error
 }

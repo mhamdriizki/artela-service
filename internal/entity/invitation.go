@@ -14,14 +14,12 @@ type Invitation struct {
 	
 	// Data Mempelai
 	GroomName     string    `json:"groom_name"`
-	GroomPhoto    string    `json:"groom_photo"` // Disimpan string filename
+	GroomPhoto    string    `json:"groom_photo"`
 	BrideName     string    `json:"bride_name"`
-	BridePhoto    string    `json:"bride_photo"` // Disimpan string filename
+	BridePhoto    string    `json:"bride_photo"`
 	
-	// Detail Acara & Lokasi
-	// JSON Parser Go secara default menerima format RFC3339 (YYYY-MM-DDTHH:MM:SSZ)
+	// Detail Acara
 	WeddingDate        time.Time `json:"wedding_date"`
-	
 	AkadLocation       string    `json:"akad_location"`
 	AkadMapUrl         string    `json:"akad_map_url"`
 	ReceptionLocation  string    `json:"reception_location"`
@@ -33,7 +31,10 @@ type Invitation struct {
 
 	// Relasi
 	Gallery       []GalleryImage `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"gallery"`
+	
+	// FITUR BARU: Guestbooks (One to Many)
 	Guestbooks    []Guestbook    `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"guestbooks"`
+	
 	RSVPs         []RSVP         `gorm:"foreignKey:InvitationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rsvps"`
 }
 
@@ -43,6 +44,7 @@ type GalleryImage struct {
 	Filename     string    `json:"filename"`
 }
 
+// ENTITY BARU: Guestbook
 type Guestbook struct {
 	BaseEntity
 	InvitationID uuid.UUID `gorm:"type:char(36)" json:"invitation_id"`

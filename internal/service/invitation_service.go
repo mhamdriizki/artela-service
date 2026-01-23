@@ -14,11 +14,11 @@ type InvitationService interface {
 	UpdateInvitation(slug string, req *entity.Invitation) error
 	DeleteInvitation(slug string) error
 	
-	// Upload Handlers
 	UploadGallery(slug string, filenames []string) error
 	UploadCouplePhotos(slug string, groomFilename string, brideFilename string) error
-	
 	DeleteGalleryImage(id string) error
+	
+	// METHOD BARU
 	CreateGuestbook(slug string, req *entity.Guestbook) error
 }
 
@@ -67,11 +67,9 @@ func (s *invitationService) UpdateInvitation(slug string, req *entity.Invitation
 	if err != nil {
 		return err
 	}
-	// Map ID agar GORM melakukan update pada record yang benar
 	req.ID = existing.ID
 	req.CreatedAt = existing.CreatedAt
 	
-	// Pertahankan foto lama jika JSON update tidak menyertakannya (biasanya string kosong)
 	if req.GroomPhoto == "" { req.GroomPhoto = existing.GroomPhoto }
 	if req.BridePhoto == "" { req.BridePhoto = existing.BridePhoto }
 	
@@ -116,11 +114,14 @@ func (s *invitationService) DeleteGalleryImage(id string) error {
 	return s.repo.DeleteGalleryImage(id)
 }
 
+// IMPLEMENTASI BARU
 func (s *invitationService) CreateGuestbook(slug string, req *entity.Guestbook) error {
+	// Cari invitation dulu untuk dapatkan ID-nya
 	inv, err := s.repo.FindBySlug(slug)
 	if err != nil {
 		return err
 	}
+	
 	req.InvitationID = inv.ID
 	return s.repo.CreateGuestbook(req)
 }
