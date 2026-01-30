@@ -80,6 +80,7 @@ func main() {
 	api.Get("/invitation/:slug", invHandler.GetInvitation)
 	api.Post("/invitation/:slug/gallery", invHandler.UploadGallery) // Gallery Existing (Public?)
 	api.Post("/invitation/:slug/guestbook", invHandler.CreateGuestbook) // <--- ROUTE BARU
+	api.Post("/invitation/:slug/rsvp", invHandler.CreateRSVP)
 
 	// ADMIN ROUTES
 	admin := api.Group("/admin")

@@ -20,6 +20,7 @@ type InvitationService interface {
 	
 	// METHOD BARU
 	CreateGuestbook(slug string, req *entity.Guestbook) error
+	CreateRSVP(slug string, req *entity.RSVP) error
 }
 
 type invitationService struct {
@@ -124,4 +125,13 @@ func (s *invitationService) CreateGuestbook(slug string, req *entity.Guestbook) 
 	
 	req.InvitationID = inv.ID
 	return s.repo.CreateGuestbook(req)
+}
+
+func (s *invitationService) CreateRSVP(slug string, req *entity.RSVP) error {
+	inv, err := s.repo.FindBySlug(slug)
+	if err != nil {
+		return err
+	}
+	req.InvitationID = inv.ID
+	return s.repo.CreateRSVP(req)
 }

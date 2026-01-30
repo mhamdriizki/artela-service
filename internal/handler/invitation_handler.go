@@ -50,6 +50,21 @@ func (h *InvitationHandler) CreateInvitation(c *fiber.Ctx) error {
 	return utils.BuildResponse(c, h.errorRepo, "ART-00-001", req)
 }
 
+func (h *InvitationHandler) CreateRSVP(c *fiber.Ctx) error {
+	slug := c.Params("slug")
+	var req entity.RSVP
+
+	if err := c.BodyParser(&req); err != nil {
+		return utils.BuildResponse(c, h.errorRepo, "ART-98-001", nil)
+	}
+
+	if err := h.service.CreateRSVP(slug, &req); err != nil {
+		return utils.BuildResponse(c, h.errorRepo, "ART-99-002", nil)
+	}
+
+	return utils.BuildResponse(c, h.errorRepo, "ART-00-001", req)
+}
+
 func (h *InvitationHandler) UpdateInvitation(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	var req entity.Invitation

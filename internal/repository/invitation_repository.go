@@ -21,6 +21,7 @@ type InvitationRepository interface {
 	
 	// METHOD BARU
 	CreateGuestbook(guestbook *entity.Guestbook) error
+	CreateRSVP(rsvp *entity.RSVP) error
 }
 
 type invitationRepository struct {
@@ -92,4 +93,8 @@ func (r *invitationRepository) DeleteGalleryImage(id string) error {
 // IMPLEMENTASI BARU
 func (r *invitationRepository) CreateGuestbook(guestbook *entity.Guestbook) error {
 	return r.db.Create(guestbook).Error
+}
+
+func (r *invitationRepository) CreateRSVP(rsvp *entity.RSVP) error {
+	return r.db.Create(rsvp).Error
 }
